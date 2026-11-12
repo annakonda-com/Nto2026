@@ -13,6 +13,7 @@ package ru.nto.guestmanagement.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.Text
 import androidx.core.view.WindowCompat
 import ru.nto.guestmanagement.mobile.di.ContainerProvider
 import ru.nto.guestmanagement.mobile.ui.navigation.AppNavigation
@@ -27,6 +28,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             GuestManagementTheme {
                 AppNavigation(container)
+
+
             }
         }
     }
