@@ -1,0 +1,78 @@
+package ru.nto.guestmanagement.mobile.ui.login
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import ru.nto.guestmanagement.mobile.data.ApiResult
+import ru.nto.guestmanagement.mobile.data.RequestsApi
+import ru.nto.guestmanagement.mobile.di.AppContainer
+
+sealed interface LoginState {
+    object InitialChecking : LoginState
+    object Idle : LoginState
+    object Authorized : LoginState
+    object Loading : LoginState
+    data class Error(val message: String? = null) : LoginState
+}
+
+class LoginViewModel(private val container: AppContainer) : ViewModel() {
+
+    private val api = RequestsApi(container.httpClient)
+
+    var codeInput = MutableStateFlow("")
+        private set
+
+    private val _state = MutableStateFlow<LoginState>(LoginState.InitialChecking)
+    val state: StateFlow<LoginState> = _state.asStateFlow()
+
+    init {
+        checkExistingSession()
+    }
+
+    private fun checkExistingSession() {
+        viewModelScope.launch {
+            val savedCode = container.session.current()
+            if (!savedCode.isNullOrEmpty()) {
+                _state.value = LoginState.Authorized
+            } else {
+                _state.value = LoginState.Idle
+            }
+        }
+    }
+
+    fun onCodeChanged(newCode: String) {
+        codeInput.value = newCode
+        if (_state.value is LoginState.Error) {
+            _state.value = LoginState.Idle
+        }
+    }
+
+    fun isCodeValid(code: String): Boolean {
+        return code.length == 4 && code.all { it.isLetterOrDigit() }
+    }
+
+    fun login(onSuccess: () -> Unit) {
+        val code = codeInput.value
+        if (!isCodeValid(code)) return
+
+        viewModelScope.launch {
+            _state.value = LoginState.Loading
+            when (val result = api.auth(code)) {
+                is ApiResult.Success -> {
+                    container.session.save(code)
+                    _state.value = LoginState.Idle
+                    onSuccess()
+                }
+                is ApiResult.Unauthorized -> {
+                    _state.value = LoginState.Error("Неверный код")
+                }
+                else -> {
+                    _state.value = LoginState.Error("Ошибка входа")
+                }
+            }
+        }
+    }
+}
