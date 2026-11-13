@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import ru.nto.guestmanagement.mobile.R
 import ru.nto.guestmanagement.mobile.data.ApiResult
 import ru.nto.guestmanagement.mobile.data.RequestsApi
 import ru.nto.guestmanagement.mobile.di.AppContainer
@@ -15,7 +16,7 @@ sealed interface LoginState {
     object Idle : LoginState
     object Authorized : LoginState
     object Loading : LoginState
-    data class Error(val message: String? = null) : LoginState
+    data class Error(val messageResId: Int) : LoginState
 }
 
 class LoginViewModel(private val container: AppContainer) : ViewModel() {
@@ -51,7 +52,11 @@ class LoginViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun isCodeValid(code: String): Boolean {
-        return code.length == 4 && code.all { it.isLetterOrDigit() }
+        return code.length == 4 && code.all {
+            it in 'A'..'Z' ||
+                    it in 'a'..'z' ||
+                    it in '0'..'9'
+        }
     }
 
     fun login(onSuccess: () -> Unit) {
@@ -67,10 +72,16 @@ class LoginViewModel(private val container: AppContainer) : ViewModel() {
                     onSuccess()
                 }
                 is ApiResult.Unauthorized -> {
-                    _state.value = LoginState.Error("Неверный код")
+                    _state.value = LoginState.Error(R.string.login_error_unknown_code)
+                }
+                is ApiResult.FieldErrors, is ApiResult.Failure -> {
+                    _state.value = LoginState.Error(R.string.login_error_unknown_code)
+                }
+                is ApiResult.Network -> {
+                    _state.value = LoginState.Error(R.string.login_error_network)
                 }
                 else -> {
-                    _state.value = LoginState.Error("Ошибка входа")
+                    _state.value = LoginState.Error(R.string.login_error_other)
                 }
             }
         }

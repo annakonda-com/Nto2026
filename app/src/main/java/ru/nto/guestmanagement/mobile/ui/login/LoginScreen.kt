@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,9 @@ import ru.nto.guestmanagement.mobile.di.AppContainer
 import ru.nto.guestmanagement.mobile.ui.TestIds
 import ru.nto.guestmanagement.mobile.ui.common.containerViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat.getString
+import ru.nto.guestmanagement.mobile.R
 
 /**
  * Экран входа. Реализовать: поле кода, кнопку «Войти», запрос `/api/{code}/auth`,
@@ -46,8 +52,8 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
     val viewModel = containerViewModel { LoginViewModel(container) }
     val state by viewModel.state.collectAsState()
     val codeInput by viewModel.codeInput.collectAsState()
+    val scrollState = rememberScrollState()
 
-    // Если при старте выявили сохраненный код — сразу переходим на список заявок
     LaunchedEffect(Unit) {
         val savedCode = container.session.current()
         if (!savedCode.isNullOrEmpty()) {
@@ -57,7 +63,7 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.imePadding().fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             if (state is LoginState.InitialChecking) {
@@ -65,6 +71,7 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
             } else {
                 Column(
                     modifier = Modifier
+                        .verticalScroll(scrollState)
                         .padding(24.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -72,7 +79,7 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
                 ) {
                     if (sessionExpired) {
                         Text(
-                            text = "Сессия завершена",
+                            text = stringResource(id = R.string.login_session_expired),
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.testTag(TestIds.AUTH_SESSION_EXPIRED)
                         )
@@ -82,7 +89,7 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
                     OutlinedTextField(
                         value = codeInput,
                         onValueChange = { viewModel.onCodeChanged(it) },
-                        label = { Text("Код сотрудника") },
+                        label = { Text(stringResource(id = R.string.login_code_label)) },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -103,13 +110,13 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
                             .fillMaxWidth()
                             .testTag(TestIds.AUTH_SUBMIT)
                     ) {
-                        Text("Войти")
+                        Text(stringResource(id = R.string.login_submit))
                     }
 
                     if (state is LoginState.Error) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = (state as LoginState.Error).message ?: "Ошибка",
+                            text = stringResource((state as LoginState.Error).messageResId),
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.testTag(TestIds.AUTH_ERROR)
                         )
