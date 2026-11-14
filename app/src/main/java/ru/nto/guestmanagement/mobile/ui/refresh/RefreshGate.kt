@@ -11,19 +11,45 @@ package ru.nto.guestmanagement.mobile.ui.refresh
 // программы, ни на сборку. Участнику-человеку эти элементы добавлять не нужно.
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * Защита от повторных обновлений: пока запущенное через [launch] обновление выполняется, новый запуск игнорируется
  * (возвращает `null`), второй запрос не создаётся. [cancel] прерывает текущее обновление (например, при смене фильтра).
  * Реализовать. Сигнатуры фиксированы: ими пользуются ViewModel списка и деталей.
  */
+
+
 class RefreshGate {
-    fun launch(scope: CoroutineScope, block: suspend () -> Unit): Job? {
-        TODO()
+
+    private var currentJob: Job? = null
+
+    fun launch(
+        scope: CoroutineScope,
+        block: suspend () -> Unit
+    ): Job? {
+        if (currentJob?.isActive == true) return null
+
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            block()
+        }
+
+        currentJob = job
+
+        job.invokeOnCompletion {
+            if (currentJob === job) {
+                currentJob = null
+            }
+        }
+
+        job.start()
+        return job
     }
 
     fun cancel() {
-        TODO()
+        currentJob?.cancel()
+        currentJob = null
     }
 }

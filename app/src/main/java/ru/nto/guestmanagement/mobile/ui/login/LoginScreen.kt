@@ -54,9 +54,8 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
     val codeInput by viewModel.codeInput.collectAsState()
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        val savedCode = container.session.current()
-        if (!savedCode.isNullOrEmpty()) {
+    LaunchedEffect(state) {
+        if (state is LoginState.Authorized) {
             onLoggedIn()
         }
     }

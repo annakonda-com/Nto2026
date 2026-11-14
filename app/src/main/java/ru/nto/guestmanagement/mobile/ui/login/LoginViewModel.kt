@@ -63,6 +63,8 @@ class LoginViewModel(private val container: AppContainer) : ViewModel() {
         val code = codeInput.value
         if (!isCodeValid(code)) return
 
+        if (_state.value is LoginState.Loading) return
+
         viewModelScope.launch {
             _state.value = LoginState.Loading
             when (val result = api.auth(code)) {
