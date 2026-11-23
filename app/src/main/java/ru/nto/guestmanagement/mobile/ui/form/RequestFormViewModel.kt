@@ -212,10 +212,12 @@ class RequestFormViewModel(
         }
     }
 
+    private var created = false
+
     fun submit() {
         val current = _state.value
 
-        if (current.isSubmitting) return
+        if (current.isSubmitting || created) return
 
         _state.update {
             it.copy(
@@ -263,9 +265,7 @@ class RequestFormViewModel(
 
                 when (val result = api.create(code, body)) {
                     is ApiResult.Success -> {
-                        _state.update {
-                            it.copy(isSubmitting = false)
-                        }
+                        created = true
 
                         _events.send(RequestFormEvent.Created)
                     }
@@ -284,7 +284,17 @@ class RequestFormViewModel(
                         _state.update {
                             it.copy(
                                 isSubmitting = false,
-                                serverErrors = result.errors,
+                                serverErrors = result.errors.filterKeys { key ->
+                                    when (key) {
+                                        "fullName" -> it.fullName == current.fullName
+                                        "phone" -> it.phone == current.phone
+                                        "organization" -> it.organization == current.organization
+                                        "purpose" -> it.purpose == current.purpose
+                                        "validFrom" -> it.timeFrom == current.timeFrom
+                                        "validTo" -> it.timeTo == current.timeTo
+                                        else -> true
+                                    }
+                                },
                                 commonError = null
                             )
                         }
@@ -314,8 +324,17 @@ class RequestFormViewModel(
                         }
                     }
 
-                    ApiResult.NotFound,
                     is ApiResult.Failure -> {
+                        _state.update {
+                            it.copy(
+                                isSubmitting = false,
+                                commonError = if (result.message?.startsWith("HTTP 5") == true)
+                                    FormCommonError.NETWORK else FormCommonError.GENERAL
+                            )
+                        }
+                    }
+
+                    ApiResult.NotFound -> {
                         _state.update {
                             it.copy(
                                 isSubmitting = false,

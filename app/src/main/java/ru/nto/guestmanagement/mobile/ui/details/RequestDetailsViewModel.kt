@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.nto.guestmanagement.mobile.data.ApiResult
+import ru.nto.guestmanagement.mobile.data.RequestStatus
 import ru.nto.guestmanagement.mobile.data.RequestDetails
 import ru.nto.guestmanagement.mobile.data.RequestsApi
 import ru.nto.guestmanagement.mobile.di.AppContainer
@@ -41,25 +42,25 @@ class RequestDetailsViewModel(
     private val refreshGate = RefreshGate()
     private val requestsApi = RequestsApi(container.httpClient)
 
+    private var refreshGeneration = 0L
+
     fun loadDetails() {
+        if (_uiState.value.isCancelling) return
+        val generation = refreshGeneration
         refreshGate.launch(viewModelScope) {
             _uiState.update {
                 it.copy(isLoading = true)
             }
-            if (_uiState.value.details == null) {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-            } else {
-                _uiState.update { it.copy(error = null) }
-            }
-
             val code = container.session.current()
 
             if (code == null) {
+                _uiState.update { it.copy(isLoading = false, isCancelling = false) }
                 sessionExpired.send(Unit)
                 return@launch
             }
 
             val result = requestsApi.get(code, requestId)
+            if (generation != refreshGeneration) return@launch
 
             when (result) {
                 is ApiResult.Success -> {
@@ -77,6 +78,7 @@ class RequestDetailsViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isCancelling = false,
                             details = null,
                             error = null
                         )
@@ -108,14 +110,19 @@ class RequestDetailsViewModel(
     }
 
     fun cancelRequest() {
-        if (_uiState.value.isCancelling) return
+        if (_uiState.value.isCancelling ||
+            _uiState.value.details?.status != RequestStatus.PENDING) return
+
+        _uiState.update { it.copy(isCancelling = true, isLoading = false, cancelError = null, showCancelDialog = false) }
+        refreshGeneration++
+        refreshGate.cancel()
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isCancelling = true, cancelError = null, showCancelDialog = false) }
 
             val code = container.session.current()
 
             if (code == null) {
+                _uiState.update { it.copy(isLoading = false, isCancelling = false) }
                 sessionExpired.send(Unit)
                 return@launch
             }
@@ -139,6 +146,7 @@ class RequestDetailsViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isCancelling = false,
                             details = null,
                             error = null
                         )
