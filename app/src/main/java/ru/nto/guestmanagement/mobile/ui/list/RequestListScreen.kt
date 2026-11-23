@@ -60,6 +60,11 @@ import ru.nto.guestmanagement.mobile.ui.common.containerViewModel
 import ru.nto.guestmanagement.mobile.ui.refresh.ResumeEffect
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.runtime.rememberUpdatedState
 
 /**
  * Список заявок. Реализовать: фильтры, сортировку (как отдаёт API), пустое состояние, ошибки и «Нет связи»,
@@ -277,10 +282,22 @@ private fun RequestCard(
     index: Int,
     onClick: () -> Unit
 ) {
+    val currentOnClick = rememberUpdatedState(onClick)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    currentOnClick.value()
+                }
+            }
+            .semantics(mergeDescendants = false) {
+                onClick {
+                    currentOnClick.value()
+                    true
+                }
+            }
             .testTag(TestIds.requestsPos(index))
     ) {
         Column(

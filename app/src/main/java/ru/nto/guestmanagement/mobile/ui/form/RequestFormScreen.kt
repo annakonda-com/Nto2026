@@ -232,13 +232,13 @@ fun RequestFormScreen(
 
             if (state.isSubmitting) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(TestIds.FORM_LOADING),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.testTag(TestIds.FORM_LOADING)
+                    )
 
                     Spacer(Modifier.width(12.dp))
 
@@ -275,23 +275,21 @@ private fun FormTextField(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(tag),
-        label = {
-            Text(label)
-        },
+        label = { Text(label) },
         singleLine = true,
         isError = error != null,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType
-        ),
-        supportingText = if (error != null) {
-            {
-                Text(
-                    text = error,
-                    modifier = Modifier.testTag(errorTag)
-                )
-            }
-        } else {
-            null
-        }
+        )
     )
+
+    if (error != null) {
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(errorTag)
+        )
+    }
 }

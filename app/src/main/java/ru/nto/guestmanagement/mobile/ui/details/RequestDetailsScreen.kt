@@ -24,8 +24,18 @@ fun RequestDetailsScreen(
     onBack: () -> Unit,
     onSessionExpired: () -> Unit,
 ) {
-    val viewModel: RequestDetailsViewModel = containerViewModel {
-        RequestDetailsViewModel(requestId, container, onSessionExpired)
+    val viewModel: RequestDetailsViewModel =
+        containerViewModel {
+            RequestDetailsViewModel(requestId, container)
+        }
+
+    val currentOnSessionExpired by
+    rememberUpdatedState(onSessionExpired)
+
+    LaunchedEffect(viewModel) {
+        viewModel.sessionExpiredEvents.collect {
+            currentOnSessionExpired()
+        }
     }
 
     val state by viewModel.uiState.collectAsState()
@@ -73,7 +83,6 @@ fun RequestDetailsScreen(
             }
             Button(
                 onClick = { viewModel.loadDetails() },
-                enabled = !state.isLoading,
                 modifier = Modifier.testTag(TestIds.DETAILS_REFRESH)
             ) {
                 Text("Обновить")
@@ -92,7 +101,11 @@ fun RequestDetailsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = state.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag(TestIds.DETAILS_ERROR)
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { viewModel.loadDetails() },

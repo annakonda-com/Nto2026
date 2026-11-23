@@ -12,6 +12,8 @@ import ru.nto.guestmanagement.mobile.data.RequestDetails
 import ru.nto.guestmanagement.mobile.data.RequestsApi
 import ru.nto.guestmanagement.mobile.di.AppContainer
 import ru.nto.guestmanagement.mobile.ui.refresh.RefreshGate
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
 data class DetailsUiState(
     val details: RequestDetails? = null,
@@ -25,8 +27,13 @@ data class DetailsUiState(
 class RequestDetailsViewModel(
     private val requestId: Long,
     private val container: AppContainer,
-    private val onSessionExpired: () -> Unit
 ) : ViewModel() {
+
+    private val sessionExpired =
+        Channel<Unit>(Channel.BUFFERED)
+
+    val sessionExpiredEvents =
+        sessionExpired.receiveAsFlow()
 
     private val _uiState = MutableStateFlow(DetailsUiState())
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
@@ -34,12 +41,11 @@ class RequestDetailsViewModel(
     private val refreshGate = RefreshGate()
     private val requestsApi = RequestsApi(container.httpClient)
 
-    init {
-        loadDetails()
-    }
-
     fun loadDetails() {
         refreshGate.launch(viewModelScope) {
+            _uiState.update {
+                it.copy(isLoading = true)
+            }
             if (_uiState.value.details == null) {
                 _uiState.update { it.copy(isLoading = true, error = null) }
             } else {
@@ -49,7 +55,7 @@ class RequestDetailsViewModel(
             val code = container.session.current()
 
             if (code == null) {
-                onSessionExpired()
+                sessionExpired.send(Unit)
                 return@launch
             }
 
@@ -57,7 +63,13 @@ class RequestDetailsViewModel(
 
             when (result) {
                 is ApiResult.Success -> {
-                    _uiState.update { it.copy(details = result.value, isLoading = false, error = null) }
+                    _uiState.update {
+                        it.copy(
+                            details = result.value,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
                 }
                 is ApiResult.Unauthorized -> {
                     container.session.clear()
@@ -70,7 +82,7 @@ class RequestDetailsViewModel(
                         )
                     }
 
-                    onSessionExpired()
+                    sessionExpired.send(Unit)
                 }
                 is ApiResult.NotFound -> {
                     val errorMsg = if (_uiState.value.details != null) "Нет связи" else "Заявка не найдена"
@@ -104,7 +116,7 @@ class RequestDetailsViewModel(
             val code = container.session.current()
 
             if (code == null) {
-                onSessionExpired()
+                sessionExpired.send(Unit)
                 return@launch
             }
 
@@ -132,7 +144,7 @@ class RequestDetailsViewModel(
                         )
                     }
 
-                    onSessionExpired()
+                    sessionExpired.send(Unit)
                 }
                 else -> {
                     _uiState.update { it.copy(isCancelling = false, cancelError = "Ошибка отмены") }

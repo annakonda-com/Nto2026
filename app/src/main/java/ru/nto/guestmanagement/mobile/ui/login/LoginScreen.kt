@@ -87,7 +87,7 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
 
                     OutlinedTextField(
                         value = codeInput,
-                        onValueChange = { viewModel.onCodeChanged(it) },
+                        onValueChange = viewModel::onCodeChanged,
                         label = { Text(stringResource(id = R.string.login_code_label)) },
                         singleLine = true,
                         modifier = Modifier
@@ -103,13 +103,15 @@ fun LoginScreen(container: AppContainer, sessionExpired: Boolean, onLoggedIn: ()
                     }
 
                     Button(
-                        onClick = { viewModel.login(onSuccess = onLoggedIn) },
-                        enabled = viewModel.isCodeValid(codeInput) && state !is LoginState.Loading,
+                        onClick = viewModel::login,
+                        enabled = viewModel.isCodeValid(codeInput) &&
+                                (state == LoginState.Idle ||
+                                        state is LoginState.Error),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag(TestIds.AUTH_SUBMIT)
                     ) {
-                        Text(stringResource(id = R.string.login_submit))
+                        Text(stringResource(R.string.login_submit))
                     }
 
                     if (state is LoginState.Error) {

@@ -59,31 +59,46 @@ class LoginViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun login(onSuccess: () -> Unit) {
+    fun login() {
         val code = codeInput.value
+
         if (!isCodeValid(code)) return
 
-        if (_state.value is LoginState.Loading) return
+        val current = _state.value
+
+        if (current != LoginState.Idle &&
+            current !is LoginState.Error
+        ) return
+
+        if (!_state.compareAndSet(current, LoginState.Loading)) {
+            return
+        }
 
         viewModelScope.launch {
-            _state.value = LoginState.Loading
             when (val result = api.auth(code)) {
                 is ApiResult.Success -> {
                     container.session.save(code)
-                    _state.value = LoginState.Idle
-                    onSuccess()
+                    _state.value = LoginState.Authorized
                 }
-                is ApiResult.Unauthorized -> {
-                    _state.value = LoginState.Error(R.string.login_error_unknown_code)
+
+                is ApiResult.Unauthorized,
+                is ApiResult.FieldErrors,
+                is ApiResult.Failure -> {
+                    _state.value = LoginState.Error(
+                        R.string.login_error_unknown_code
+                    )
                 }
-                is ApiResult.FieldErrors, is ApiResult.Failure -> {
-                    _state.value = LoginState.Error(R.string.login_error_unknown_code)
-                }
+
                 is ApiResult.Network -> {
-                    _state.value = LoginState.Error(R.string.login_error_network)
+                    _state.value = LoginState.Error(
+                        R.string.login_error_network
+                    )
                 }
+
                 else -> {
-                    _state.value = LoginState.Error(R.string.login_error_other)
+                    _state.value = LoginState.Error(
+                        R.string.login_error_other
+                    )
                 }
             }
         }
