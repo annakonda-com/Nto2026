@@ -60,11 +60,21 @@ class RequestDetailsViewModel(
                     _uiState.update { it.copy(details = result.value, isLoading = false, error = null) }
                 }
                 is ApiResult.Unauthorized -> {
+                    container.session.clear()
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            details = null,
+                            error = null
+                        )
+                    }
+
                     onSessionExpired()
-                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is ApiResult.NotFound -> {
-                    _uiState.update { it.copy(isLoading = false, error = "Заявка не найдена") }
+                    val errorMsg = if (_uiState.value.details != null) "Нет связи" else "Заявка не найдена"
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                 }
                 is ApiResult.Network, is ApiResult.Failure -> {
                     val errorMsg = if (_uiState.value.details != null) "Нет связи" else "Ошибка загрузки"
@@ -112,8 +122,17 @@ class RequestDetailsViewModel(
                     _uiState.update { it.copy(isCancelling = false, cancelError = "Нет связи") }
                 }
                 is ApiResult.Unauthorized -> {
+                    container.session.clear()
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            details = null,
+                            error = null
+                        )
+                    }
+
                     onSessionExpired()
-                    _uiState.update { it.copy(isCancelling = false) }
                 }
                 else -> {
                     _uiState.update { it.copy(isCancelling = false, cancelError = "Ошибка отмены") }

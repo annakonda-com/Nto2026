@@ -15,6 +15,7 @@ import ru.nto.guestmanagement.mobile.data.RequestSummary
 import ru.nto.guestmanagement.mobile.data.RequestsApi
 import ru.nto.guestmanagement.mobile.di.AppContainer
 import ru.nto.guestmanagement.mobile.ui.refresh.RefreshGate
+import kotlin.coroutines.cancellation.CancellationException
 
 data class RequestListState(
     val selectedFilter: RequestStatus? = null,
@@ -118,6 +119,8 @@ class RequestListViewModel(
                     handleError()
                 }
             }
+        }catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             handleError()
         }

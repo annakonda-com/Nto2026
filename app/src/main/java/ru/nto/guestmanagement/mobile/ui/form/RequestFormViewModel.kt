@@ -20,17 +20,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import kotlin.coroutines.cancellation.CancellationException
 
-
-enum class FormField {
-    FULL_NAME,
-    PHONE,
-    ORGANIZATION,
-    PURPOSE,
-    DATE,
-    VALID_FROM,
-    VALID_TO
-}
-
 enum class FormValidationError {
     FULL_NAME,
     PHONE,
